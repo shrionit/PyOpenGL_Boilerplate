@@ -3,6 +3,7 @@ from OpenGL.GL import *
 from OpenGL.GL.shaders import *
 from core import input
 
+
 class Window:
     WIDTH = 480
     HEIGHT = 270
@@ -13,6 +14,8 @@ class Window:
             return
         self.clearColor = [0.15, 0.15, 0.15, 1.0]
         self.create(W, H, TITLE)
+        self._prevTime = 0
+        self._deltatime = 0
 
     def create(self, W, H, TITLE):
         Window.WIDTH = W
@@ -22,9 +25,10 @@ class Window:
 
         glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
         glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
-        glfw.window_hint(glfw.SAMPLES, 8)
+        glfw.window_hint(glfw.SAMPLES, 4)
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
         glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, GL_TRUE)
+        glfw.window_hint(glfw.TRANSPARENT_FRAMEBUFFER, glfw.TRUE)
 
         if not self.window:
             glfw.terminate()
@@ -32,6 +36,8 @@ class Window:
         glfw.make_context_current(self.window)
         glViewport(0, 0, Window.WIDTH, Window.HEIGHT)
         glClearColor(*self.clearColor)
+        glEnable(GL_DEPTH_TEST)
+        glEnable(GL_MULTISAMPLE)
         # Callbacks
         self.setup_callbacks()
         return self.window
@@ -42,15 +48,23 @@ class Window:
     def get_window(self):
         return self.window
 
-    def setup_callbacks(self):
-        glfw.set_window_size_callback(self.window, self.on_resize)
-        glfw.set_cursor_pos_callback(self.window, input.mouse_handler)
-        glfw.set_key_callback(self.window, input.keyboard_handler)
+    def get_deltatime(self):
+        return self._deltatime
 
-    def update(self, mask=GL_COLOR_BUFFER_BIT):
+    def setup_callbacks(self):
+        glfw.set_scroll_callback(self.window, input.on_scroll)
+        glfw.set_window_size_callback(self.window, self.on_resize)
+        glfw.set_key_callback(self.window, input.keyboard_handler)
+        glfw.set_cursor_pos_callback(self.window, input.mouse_handler)
+        glfw.set_mouse_button_callback(self.window, input.mouse_button_handler)
+
+    def update(self):
+        currTime = glfw.get_time()
+        self._deltatime = currTime - self._prevTime
+        self._prevTime = currTime
         glfw.swap_buffers(self.window)
         glfw.poll_events()
-        glClear(mask)
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)  # type: ignore
 
     def on_resize(self, _, width, height):
         Window.WIDTH = width
